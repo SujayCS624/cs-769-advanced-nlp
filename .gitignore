@@ -1,0 +1,9 @@
+.DS_Store
+__pycache__
+pre_trained_embeddings
+*.dev.txt
+*.test.txt
+9085871714
+9085871714.zip
+*.pt
+**/.DS_Store
