@@ -41,10 +41,15 @@ class AdamW(Optimizer):
                 # State should be stored in this dictionary
                 state = self.state[p]
 
+                # Initialize time step, first and second moments of the gradients
                 if len(state) == 0:
                     state["step"] = 0
                     state["mean"] = torch.zeros_like(p.data)
                     state["variance"] = torch.zeros_like(p.data)
+
+                # Increment time step of optimizer
+                state["step"] += 1
+                step = state["step"]
     
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
@@ -52,25 +57,24 @@ class AdamW(Optimizer):
                 eps = group["eps"]
                 weight_decay = group["weight_decay"]
 
-                state["step"] += 1
-                step = state["step"]
-
                 # Update first and second moments of the gradients
-
                 state["mean"].lerp_(grad, 1 - beta1)
                 state["variance"].mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
 
                 # Bias correction
                 # Please note that we are using the "efficient version" given in
                 # https://arxiv.org/abs/1412.6980
+                bias_correction1 = torch.tensor(1.0 - beta1**step)
+                bias_correction2 = torch.tensor(1.0 - beta2**step)
 
-                bias_correction1 = 1.0 - beta1**step
-                bias_correction2 = 1.0 - beta2**step
-
-                alpha_new = alpha * bias_correction2.sqrt() / bias_correction1
                 # Update parameters
-
+                alpha_new = alpha * bias_correction2.sqrt() / bias_correction1
+                update_1 = -alpha_new * state["mean"] / (state["variance"].sqrt() + eps)
+                
                 # Add weight decay after the main gradient-based updates.
                 # Please note that the learning rate should be incorporated into this update.
+                update_2 = p.data.mul(-alpha * weight_decay)
+                
+                p.data.add_(update_1).add_(update_2)
 
         return loss
