@@ -25,7 +25,6 @@ required_files = {
     'cfimdb-test-output.txt', 
     'cfimdb-train-log.txt',
     'run_exp.sh',
-    'setup.py'
 }
 
 def check_file(file: str, check_aid: str):
@@ -67,7 +66,7 @@ def main(path: str, aid: str):
                 if '.git' in root or '__pycache__' in root:
                     continue  # ignore some parts
                 for file in files:
-                    if any(file.endswith(s) for s in ['.pdf', '.txt', '.sh', '.py', '.npy']):
+                    if any(file.endswith(s) for s in ['.txt', '.sh', '.py', 'md','data', 'pdf']):
                         ff = os.path.join(root, file)
                         rpath = os.path.relpath(ff, path)
                         zz.write(ff, os.path.join(".", aid, rpath))
