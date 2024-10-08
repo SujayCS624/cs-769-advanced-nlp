@@ -114,7 +114,6 @@ class BertLayer(nn.Module):
     # feed forward
     ff_output = self.interm_dense(attn_output_norm)
     ff_output = self.interm_af(ff_output)
-    ff_output = self.out_dense(ff_output)
 
     # another add-norm layer
     ff_output_norm = self.add_norm(attn_output_norm, ff_output, self.out_dense, self.out_dropout, self.out_layer_norm)
