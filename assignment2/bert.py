@@ -89,8 +89,11 @@ class BertLayer(nn.Module):
     ln_layer: layer norm that takes input+sublayer(output) 
     This function computes ``LayerNorm(input + Sublayer(output))``, where sublayer is a dense_layer followed by dropout.
     """
-    # todo
-    raise NotImplementedError
+    # Apply sublayer transform plus dropout to output
+    sublayer_output = dropout(dense_layer(output))
+
+    # Compute and return layer norm of input + sublayer_output
+    return ln_layer(input + sublayer_output)
 
   def forward(self, hidden_states, attention_mask):
     """
