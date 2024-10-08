@@ -43,11 +43,19 @@ class BertSelfAttention(nn.Module):
     # Note again: in the attention_mask non-padding tokens with 0 and padding tokens with a large negative number 
 
     # normalize the scores
+    attention_scores = torch.matmul(query, key.transpose(2, 3)) / math.sqrt(self.attention_head_size)
+    attention_scores += attention_mask
+    attention_probs = attention_scores.softmax(dim=-1)
+    norm_scores = self.dropout(attention_probs)
+
 
     # multiply the attention scores to the value and get back V' 
+    attn_output = torch.matmul(norm_scores, value) 
 
     # next, we need to concat multi-heads and recover the original shape [bs, seq_len, num_attention_heads * attention_head_size = hidden_size]
-    raise NotImplementedError
+    attn_output = attn_output.transpose(1,2).contiguous()
+    attn_output = attn_output.view(attn_output.shape[0], attn_output.shape[1], attn_output.shape[2]*attn_output.shape[3])
+    return attn_output
 
   def forward(self, hidden_states, attention_mask):
     """
