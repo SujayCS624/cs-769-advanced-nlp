@@ -46,7 +46,7 @@ class BertSentClassifier(torch.nn.Module):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
 
         # Obtain the pooled output representation of the sentence (CLS token)
-        pooled_output = outputs.pooler_output
+        pooled_output = outputs['pooler_output']
 
         # Apply dropout to the pooled-output and project it using a linear layer
         pooled_output = self.dropout(pooled_output)
