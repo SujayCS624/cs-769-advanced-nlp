@@ -198,6 +198,16 @@ def train(args):
     optimizer = AdamW(model.parameters(), lr=lr)
     best_dev_acc = 0
 
+    # Hyperparamters for computing SIR and BPPO loss
+    epsilon = 1e-4
+    lambda_bregman = 1e-3
+    lambda_sir = 1e-3
+
+    # Initialize the previous iteration's model for BPPO
+    prev_model = BertSentClassifier(config)
+    prev_model = prev_model.to(device)
+    prev_model.load_state_dict(model.state_dict())
+
     ## run for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -212,16 +222,53 @@ def train(args):
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
+            
+            # Compute original logits and task-specific loss
             logits = model(b_ids, b_mask)
-            loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
+            original_loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
 
-            loss.backward()
+            # Compute previous model's logits
+            with torch.no_grad():
+                prev_logits = prev_model(b_ids, b_mask)
+
+            # Compute KL divergence between current and previous model's logits as BPPO loss
+            bppo_loss = F.kl_div(F.log_softmax(logits, dim=-1), F.softmax(prev_logits, dim=-1), reduction='batchmean')
+
+            # Add noise to model weights
+            # weight_noise = {}
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         noise = torch.randn_like(param) * epsilon
+            #         param.data.add_(noise) 
+            #         weight_noise[name] = noise
+
+            # Compute perturbed logits after adding noise
+            # perturbed_logits = model(b_ids, b_mask)
+
+            # Compute KL divergence between current and perturbed model's logits as SIR loss
+            # sir_loss = F.kl_div(F.log_softmax(logits, dim=-1), F.softmax(perturbed_logits, dim=-1), reduction='batchmean')
+
+            # Restore parameters to that of the current model
+            # for name, param in model.named_parameters():
+            #     if name in weight_noise:
+            #         param.data.sub_(weight_noise[name])
+
+            # Combine task loss, SIR loss, and BPPO loss
+            # total_loss = original_loss + lambda_sir * sir_loss + lambda_bregman * bppo_loss
+            # total_loss = original_loss + lambda_sir * sir_loss
+            total_loss = original_loss + lambda_bregman * bppo_loss
+
+            total_loss.backward()
+
             optimizer.step()
 
-            train_loss += loss.item()
+            train_loss += total_loss.item()
             num_batches += 1
 
         train_loss = train_loss / (num_batches)
+
+        # Update previous model for BPPO
+        prev_model.load_state_dict(model.state_dict())
 
         train_acc, train_f1, *_ = model_eval(train_dataloader, model, device)
         dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device)

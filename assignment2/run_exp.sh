@@ -25,6 +25,8 @@ python classifier.py \
 PREF='cfimdb'
 python classifier.py \
     --use_gpu \
+    --batch_size 4 \
+    --epochs 20 \
     --option finetune \
     --lr 1e-5 \
     --hidden_dropout_prob 0.1 \
